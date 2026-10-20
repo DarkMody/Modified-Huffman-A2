@@ -26,7 +26,8 @@ others_decoding_table = {}
 # ================= functions ==========================
 
 
-def create_node_list(text, limit):
+def create_node_list(file, limit):
+    text = file.read()
     dict_counts = {}
     lettersCount = len(text)
     othersNode = Node("others")
@@ -51,13 +52,12 @@ def create_node_list(text, limit):
 
         else:
             others_encoding_table[char] = shortCode
-            shortCode = format(
-                int(shortCode, 2) + 1, "06b"
-            )  # increment the short code
+            shortCode = format(int(shortCode, 2) + 1, "06b")  # increment the short code
             othersNode.probability += nodeProbability
 
     # add the othersNode to the final list
-    node_list.append(othersNode)
+    if others_encoding_table:
+        node_list.append(othersNode)
     # sort based on probability
     node_list.sort()
 
@@ -93,23 +93,29 @@ def create_codes(node, current_code):
         decoding_table[current_code] = node.char
 
 
-def encode(text):
+def create_others_decoding_table():
+    for char, code in others_encoding_table.items():
+        others_decoding_table[code] = char
+
+
+
+def encode(file):
+    text = file.read()
     encoded_text = ""
 
     for char in text:
         if char in others_encoding_table:
-            encoded_text += encoding_table["others"] + str(
-                others_encoding_table[char]
-            )
+            encoded_text += encoding_table["others"] + str(others_encoding_table[char])
         else:
             encoded_text += encoding_table[char]
 
     return encoded_text
 
 
-def decode(text, decoding_tbl, others_decoding_tbl):
+def decode(file, decoding_table, others_decoding_table):
     current_string = ""
     decoded_string = ""
+    text = file.read()
 
     i = 0
     while i < len(text):
@@ -117,46 +123,51 @@ def decode(text, decoding_tbl, others_decoding_tbl):
         current_string += text[i]
         i += 1
 
-        if current_string not in decoding_tbl:
+        if current_string not in decoding_table:
             continue
 
         # if the current code is "others" code
-        if decoding_tbl[current_string] == "others":
-            decoded_string += others_decoding_tbl[
-                text[i : i + 6]
-            ]  # the next 6 bits will be decoded
+        if decoding_table[current_string] == "others":
+            six_bits = text[i : i + 6]
+            print(f"Found 'others' code! Looking up 6 bits: '{six_bits}' -> Result: {others_decoding_table.get(six_bits, 'MISSING!')}")
+            decoded_string += others_decoding_table[text[i : i + 6]]  # the next 6 bits will be decoded
             i += 6  # skip the next 6 bits
             current_string = ""
 
         else:
-            decoded_string += decoding_tbl[current_string]
+            decoded_string += decoding_table[current_string]
             current_string = ""
 
     return decoded_string
 
 
-def create_decoding_file(fileName):
-    with open(f"./dict.txt", "w") as decodingFile:
+def create_decoding_file():
+    with open(f"dict.txt", "w") as decodingFile:
+
         for code, char in decoding_table.items():
             decodingFile.write(f"{code} {char}\n")
 
+        decodingFile.write("OTHERS\n")
+        for code, char in others_decoding_table.items():
+            decodingFile.write(f"{code} {char}\n")
 
-def load_decoding_file(dict_filename):
-    global decoding_table, others_decoding_table
-    decoding_table = {}
-    others_decoding_table = {}
+def load_decoding_file(dict_file):
 
-    with open(f"./{dict_filename}", "r") as f:
-        for line in f:
-            line = line.strip()
-            # Check if the line is not empty and contains a space
-            if line and " " in line:
+    currentSection = "NORMAL"
+
+    for line in dict_file:
+        if line == "OTHERS\n":
+            currentSection = "OTHERS"
+            continue
+
+        if line and " " in line:
+            if currentSection == "NORMAL":
                 code, char = line.split(" ", 1)
                 decoding_table[code] = char
+            else:
+                code, char = line.split(" ", 1)
+                others_decoding_table[code] = char
 
-                # If it's part of the 'others' escape scheme (6-bit short codes)
-                if len(code) == 6 and code.isdigit():
-                    others_decoding_table[code] = char
 
 def main():
     while True:
@@ -165,47 +176,42 @@ def main():
 
         if choice == 1:
             limit = float(input("Enter min limit of probability: "))
-            with open(f"./{fileName}", "r") as f:
-                file = f.read()
+            with open(f"{fileName}", "r") as file:
+                #file = f.read()
 
-            create_codes(create_huffman_tree(create_node_list(file, limit)), "")
+                create_codes(create_huffman_tree(create_node_list(file, limit)), "")
+                file.seek(0)
 
-            with open(f"./{fileName[:-4]}_compressed.txt", "w") as compressedFile:
-                compressedFile.write(encode(file))
-            print(encode(file))
+                with open(f"./compressed.txt", "w") as compressedFile:
+                    compressedFile.write(encode(file))
 
-            create_decoding_file(fileName[:-4])
+                create_others_decoding_table()
+                create_decoding_file()
 
         elif choice == 2:
-            with open(f"./{fileName}", "r") as f:
-                file = f.read()
+            with open(f"./{fileName}", "r") as file:
 
-            decodingFileChoice = input(
-                f'Enter decoding table filename to use for decompression (press enter for default "dict.txt"): '
-            )
+                dictionaryFileChoice = input(
+                    f'Enter decoding table filename to use for decompression (press enter for default "dict.txt"): '
+                )
 
-            if decodingFileChoice == "":
-                dict_name = f"dict.txt"
-            else:
-                dict_name = decodingFileChoice
+                if dictionaryFileChoice == "":
+                    dict_name = f"dict.txt"
+                else:
+                    dict_name = dictionaryFileChoice
 
-            # Load the dictionary from file into our tables
-            load_decoding_file(dict_name)
+                # Load the dictionary from file into our tables
+                dictionaryFile = open(dict_name, "r")
+                load_decoding_file(dictionaryFile)
+                dictionaryFile.close()
 
-            # Perform decoding and write to output file
-            decompressed_data = decode(
-                file, decoding_table, others_decoding_table
-            )
-            with open(
-                f"./{fileName[:-4]}_decompressed.txt", "w"
-            ) as decompressedFile:
-                decompressedFile.write(decompressed_data)
+                # Perform decoding and write to output file
+                decompressed_data = decode(
+                    file, decoding_table, others_decoding_table
+                )
+                with open(f"decompressed.txt", "w") as decompressedFile:
+                    decompressedFile.write(decompressed_data)
 
-        # reset global tables for next loop iteration
-        decoding_table = {}
-        encoding_table = {}
-        others_decoding_table = {}
-        others_encoding_table = {}
 
 
 if __name__ == "__main__":
