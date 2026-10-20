@@ -1,4 +1,3 @@
-
 # ================= classes ====================
 
 
@@ -9,12 +8,12 @@ class Node:
         char=None,
     ):
         self.char = char
-        self.probability = 0
+        self.ratio = 0
         self.left = None
         self.right = None
 
     def __lt__(self, other):
-        return self.probability < other.probability
+        return self.ratio < other.ratio
 
 
 # ================= global variables ===================
@@ -43,22 +42,22 @@ def create_node_list(file, limit):
     # then move everything in the dict to a list
     node_list = []
     for char, count in dict_counts.items():
-        nodeProbability = count / lettersCount
+        nodeRatio = count / lettersCount
 
-        if nodeProbability > limit:
+        if nodeRatio > limit:
             node = Node(char)
-            node.probability = nodeProbability
+            node.ratio = nodeRatio
             node_list.append(node)
 
         else:
             others_encoding_table[char] = shortCode
             shortCode = format(int(shortCode, 2) + 1, "06b")  # increment the short code
-            othersNode.probability += nodeProbability
+            othersNode.ratio += nodeRatio
 
     # add the othersNode to the final list
     if others_encoding_table:
         node_list.append(othersNode)
-    # sort based on probability
+    # sort based on ratio
     node_list.sort()
 
     return node_list
@@ -66,9 +65,9 @@ def create_node_list(file, limit):
 
 def create_huffman_tree(nodes):
     while len(nodes) > 1:
-        newNodeProbability = nodes[0].probability + nodes[1].probability
+        newNodeRatio = nodes[0].ratio + nodes[1].ratio
         newNode = Node(None)
-        newNode.probability = newNodeProbability
+        newNode.ratio = newNodeRatio
 
         newNode.left = nodes[0]
         newNode.right = nodes[1]
@@ -154,7 +153,6 @@ def create_decoding_file():
 def load_decoding_file(dict_file):
     global decoding_table, others_decoding_table
     decoding_table.clear()
-    others_others_decoding_table = {}  # type cleanup
     others_decoding_table.clear()
 
     currentSection = "NORMAL"
@@ -171,6 +169,7 @@ def load_decoding_file(dict_file):
 
         if " " in line:
             code, repr_char = line.split(" ", 1)
+            # eval() safely turns '\n' or ' ' back into the actual character
             char = eval(repr_char)
 
             if currentSection == "NORMAL":
@@ -184,7 +183,7 @@ def main():
         fileName = input("Enter file name including extension: ")
 
         if choice == 1:
-            limit = float(input("Enter min limit of probability: "))
+            limit = float(input("Enter min limit of ratio: "))
             with open(f"{fileName}", "r") as file:
                 #file = f.read()
 
