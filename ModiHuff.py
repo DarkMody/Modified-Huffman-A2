@@ -140,34 +140,43 @@ def decode(file, decoding_table, others_decoding_table):
 
     return decoded_string
 
-
 def create_decoding_file():
-    with open(f"dict.txt", "w") as decodingFile:
-
+    with open("dict.txt", "w") as decodingFile:
         for code, char in decoding_table.items():
-            decodingFile.write(f"{code} {char}\n")
+            # repr() safely converts '\n', ' ', etc., into printable text like "'\n'" or "' '"
+            decodingFile.write(f"{code} {repr(char)}\n")
 
         decodingFile.write("OTHERS\n")
         for code, char in others_decoding_table.items():
-            decodingFile.write(f"{code} {char}\n")
+            decodingFile.write(f"{code} {repr(char)}\n")
+
 
 def load_decoding_file(dict_file):
+    global decoding_table, others_decoding_table
+    decoding_table.clear()
+    others_others_decoding_table = {}  # type cleanup
+    others_decoding_table.clear()
 
     currentSection = "NORMAL"
 
     for line in dict_file:
-        if line == "OTHERS\n":
+        line = line.rstrip("\r\n")
+
+        if not line:
+            continue
+
+        if line == "OTHERS":
             currentSection = "OTHERS"
             continue
 
-        if line and " " in line:
+        if " " in line:
+            code, repr_char = line.split(" ", 1)
+            char = eval(repr_char)
+
             if currentSection == "NORMAL":
-                code, char = line.split(" ", 1)
                 decoding_table[code] = char
             else:
-                code, char = line.split(" ", 1)
                 others_decoding_table[code] = char
-
 
 def main():
     while True:
