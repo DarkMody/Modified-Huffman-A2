@@ -1,4 +1,4 @@
-import heapq, math
+import heapq, math, ast
 
 
 class Node:
@@ -15,8 +15,6 @@ class Node:
 def count_and_ratio(text, max_ratio):
     dictionary = {}
     for ch in text:
-        if ch == "\n" or ch == "\r":
-            continue
         if ch in dictionary:
             dictionary[ch] += 1
         else:
@@ -29,7 +27,6 @@ def count_and_ratio(text, max_ratio):
             # ratio = round(ratio, 2)
             ret.append([ch, ratio])
         else:
-            print(ratio)
             other[1] += ratio
     if other[1] > 0:
         ret.append(other)
@@ -86,8 +83,6 @@ def modified_huffman_compress(file1="file1", file2="file2", max_ratio=0.05):
         original_codes = char_original_codes(dictionary, original_codes_len)
         result = ""
         for ch in text:
-            if ch == "\n" or ch == "\r":
-                continue
             if ch in codes_dictionary:
                 result += codes_dictionary[ch]
             else:
@@ -95,14 +90,13 @@ def modified_huffman_compress(file1="file1", file2="file2", max_ratio=0.05):
         with open(file2 + ".txt", "w", encoding="utf-8", newline="") as export:
             export.write(f"{result}")
         with open("codes_dictionary.txt", "w", encoding="utf-8", newline="") as cd:
-            print(char_freq)
             for ch, code in codes_dictionary.items():
-                cd.write(f"{ch},{code}\n")
+                cd.write(f"{repr(ch)} {code}\n")
         with open(
             "original_codes_dictionary.txt", "w", encoding="utf-8", newline=""
         ) as ocd:
             for ch, code in original_codes.items():
-                ocd.write(f"{ch},{code}\n")
+                ocd.write(f"{repr(ch)} {code}\n")
 
 
 def modified_huffman_decompress(file2="file2", file3="file3"):
@@ -110,12 +104,12 @@ def modified_huffman_decompress(file2="file2", file3="file3"):
     original_codes = {}
     with open("codes_dictionary.txt", encoding="utf-8", newline="") as cd:
         for line in cd:
-            res = line.strip().split(",")
-            codes_dictionary[res[1]] = res[0]
+            res = line.strip().rsplit(" ", 1)
+            codes_dictionary[res[1]] = ast.literal_eval(res[0])
     with open("original_codes_dictionary.txt", encoding="utf-8", newline="") as ocd:
         for line in ocd:
-            res = line.strip().split(",")
-            original_codes[res[1]] = res[0]
+            res = line.strip().rsplit(" ", 1)
+            original_codes[res[1]] = ast.literal_eval(res[0])
     with open(file2 + ".txt", encoding="utf-8", newline="") as fileOpener:
         binary = fileOpener.read()
         text = ""
