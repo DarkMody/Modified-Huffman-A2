@@ -1,3 +1,4 @@
+import math
 # ================= classes ====================
 
 
@@ -47,9 +48,11 @@ def create_node_list(file, limit):
             node_list.append(node)
 
         else:
-            others_encoding_table[char] = shortCode
-            shortCode = format(int(shortCode, 2) + 1, "06b")  # increment the short code
+            others_encoding_table[char] = ""
+            #shortCode = format(int(shortCode, 2) + 1, "06b")  # increment the short code
             othersNode.ratio += nodeRatio
+
+    create_original_codes()
 
     # add the othersNode to the final list
     if others_encoding_table:
@@ -59,6 +62,14 @@ def create_node_list(file, limit):
 
     return node_list
 
+
+def create_original_codes():
+    originalCodeSize = math.ceil(math.log2(len(others_encoding_table)))
+    originalCode = format(0, f"0{originalCodeSize}b")
+
+    for char, code in others_encoding_table.items():
+        others_encoding_table[char] = originalCode
+        originalCode = format(int(originalCode, 2) + 1, f"0{originalCodeSize}b")  # increment the original code
 
 def create_huffman_tree(nodes):
     while len(nodes) > 1:
@@ -111,6 +122,7 @@ def encode(file):
 def decode(file, decoding_table, others_decoding_table):
     current_string = ""
     decoded_string = ""
+    originalCodeSize = math.ceil(math.log2(len(others_decoding_table)))
     text = file.read()
 
     i = 0
@@ -124,9 +136,9 @@ def decode(file, decoding_table, others_decoding_table):
 
         # if the current code is "others" code
         if decoding_table[current_string] == "others":
-            six_bits = text[i : i + 6]
-            decoded_string += others_decoding_table[text[i : i + 6]]  # the next 6 bits will be decoded
-            i += 6  # skip the next 6 bits
+            six_bits = text[i : i + originalCodeSize]
+            decoded_string += others_decoding_table[text[i : i + originalCodeSize]]  # the next originalCodeSize bits will be decoded
+            i += originalCodeSize  # skip the next originalCodeSize bits
             current_string = ""
 
         else:
