@@ -3,10 +3,7 @@
 
 class Node:
 
-    def __init__(
-        self,
-        char=None,
-    ):
+    def __init__(self, char=None,):
         self.char = char
         self.ratio = 0
         self.left = None
@@ -57,7 +54,7 @@ def create_node_list(file, limit):
     # add the othersNode to the final list
     if others_encoding_table:
         node_list.append(othersNode)
-    # sort based on ratio
+
     node_list.sort()
 
     return node_list
@@ -82,10 +79,10 @@ def create_huffman_tree(nodes):
     return nodes[0]  # returns only the root
 
 
-def create_codes(node, current_code):
+def create_coding_table(node, current_code):
     if node.char is None:
-        create_codes(node.left, current_code + "0")
-        create_codes(node.right, current_code + "1")
+        create_coding_table(node.left, current_code + "0")
+        create_coding_table(node.right, current_code + "1")
 
     else:
         encoding_table[node.char] = current_code
@@ -104,7 +101,7 @@ def encode(file):
 
     for char in text:
         if char in others_encoding_table:
-            encoded_text += encoding_table["others"] + str(others_encoding_table[char])
+            encoded_text += encoding_table["others"] + others_encoding_table[char]
         else:
             encoded_text += encoding_table[char]
 
@@ -128,7 +125,6 @@ def decode(file, decoding_table, others_decoding_table):
         # if the current code is "others" code
         if decoding_table[current_string] == "others":
             six_bits = text[i : i + 6]
-            print(f"Found 'others' code! Looking up 6 bits: '{six_bits}' -> Result: {others_decoding_table.get(six_bits, 'MISSING!')}")
             decoded_string += others_decoding_table[text[i : i + 6]]  # the next 6 bits will be decoded
             i += 6  # skip the next 6 bits
             current_string = ""
@@ -142,7 +138,7 @@ def decode(file, decoding_table, others_decoding_table):
 def create_decoding_file():
     with open("dict.txt", "w") as decodingFile:
         for code, char in decoding_table.items():
-            # repr() safely converts '\n', ' ', etc., into printable text like "'\n'" or "' '"
+
             decodingFile.write(f"{code} {repr(char)}\n")
 
         decodingFile.write("OTHERS\n")
@@ -169,7 +165,7 @@ def load_decoding_file(dict_file):
 
         if " " in line:
             code, repr_char = line.split(" ", 1)
-            # eval() safely turns '\n' or ' ' back into the actual character
+
             char = eval(repr_char)
 
             if currentSection == "NORMAL":
@@ -179,15 +175,16 @@ def load_decoding_file(dict_file):
 
 def main():
     while True:
-        choice = int(input("1. Compress\n2. Decompress\n"))
-        fileName = input("Enter file name including extension: ")
+        choice = int(input("1. Compress\n2. Decompress\n3. Exit\n"))
+
 
         if choice == 1:
+            fileName = input("Enter file name including extension: ")
             limit = float(input("Enter min limit of ratio: "))
             with open(f"{fileName}", "r") as file:
                 #file = f.read()
 
-                create_codes(create_huffman_tree(create_node_list(file, limit)), "")
+                create_coding_table(create_huffman_tree(create_node_list(file, limit)), "")
                 file.seek(0)
 
                 with open(f"./compressed.txt", "w") as compressedFile:
@@ -197,29 +194,30 @@ def main():
                 create_decoding_file()
 
         elif choice == 2:
+            fileName = input("Enter file name including extension: ")
             with open(f"./{fileName}", "r") as file:
 
-                dictionaryFileChoice = input(
-                    f'Enter decoding table filename to use for decompression (press enter for default "dict.txt"): '
-                )
+                dictionaryFileChoice = input(f'Enter decoding table filename to use for decompression (press enter for default "dict.txt"): ')
 
                 if dictionaryFileChoice == "":
                     dict_name = f"dict.txt"
                 else:
                     dict_name = dictionaryFileChoice
 
-                # Load the dictionary from file into our tables
+
                 dictionaryFile = open(dict_name, "r")
                 load_decoding_file(dictionaryFile)
                 dictionaryFile.close()
 
-                # Perform decoding and write to output file
+
                 decompressed_data = decode(
                     file, decoding_table, others_decoding_table
                 )
                 with open(f"decompressed.txt", "w") as decompressedFile:
                     decompressedFile.write(decompressed_data)
 
+        elif choice == 3:
+            break
 
 
 if __name__ == "__main__":
